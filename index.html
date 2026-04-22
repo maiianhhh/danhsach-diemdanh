@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Điểm danh + Excel</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#eef2f7;
+    padding:20px;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+}
+
+h2{text-align:center;}
+
+.box{
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:15px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.1);
+}
+
+.card{
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:10px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.1);
+}
+
+.actions{
+    margin-top:10px;
+}
+
+button{
+    padding:6px 10px;
+    margin:5px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+.add{background:#007bff;color:white;}
+.present{background:#28a745;color:white;}
+.permit{background:#ffc107;}
+.export{background:#673ab7;color:white;}
+
+.status{
+    margin-top:10px;
+    font-weight:bold;
+}
+
+.green{color:#28a745;}
+.orange{color:#ff9800;}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>HỆ THỐNG ĐIỂM DANH</h2>
+
+<div class="box">
+    Ngày: <input type="date" id="date"><br>
+    Tên: <input type="text" id="name">
+    <button class="add" onclick="add()">Thêm</button>
+</div>
+
+<div id="list"></div>
+
+<div class="box">
+    <button class="export" onclick="exportData()">Xuất danh sách</button>
+    <button class="export" onclick="exportExcel()">Xuất Excel</button>
+    <div id="result"></div>
+</div>
+
+</div>
+
+<script>
+
+let students = JSON.parse(localStorage.getItem('data_full')) || [];
+
+function formatDate(d){
+    if(!d) return "";
+    let x = new Date(d);
+    return String(x.getDate()).padStart(2,'0') + '-' +
+           String(x.getMonth()+1).padStart(2,'0') + '-' +
+           x.getFullYear();
+}
+
+function add(){
+    let name = document.getElementById('name').value;
+    let dob = document.getElementById('dob').value;
+
+    if(!name || !dob){
+        alert("Nhập đủ thông tin");
+        return;
+    }
+
+    students.push({name, dob, status:"Chưa chọn"});
+    save();
+    render();
+
+    document.getElementById('name').value="";
+    document.getElementById('dob').value="";
+}
+
+function render(){
+    let html="";
+
+    students.forEach((s,i)=>{
+        html+=`
+        <div class="card">
+            <b>${s.name}</b><br>
+            Ngày sinh: ${formatDate(s.dob)}
+
+            <div class="actions">
+                <button class="present" onclick="setStatus(${i}, 'Có đi học')">✔ Có đi học</button>
+                <button class="permit" onclick="setStatus(${i}, 'Nghỉ có lý do')">📄 Nghỉ có lý do</button>
+            </div>
+
+            <div class="status ${getClass(s.status)}">
+                Trạng thái: ${s.status}
+            </div>
+
+            <button onclick="remove(${i})">🗑 Xoá</button>
+        </div>`;
+    });
+
+    document.getElementById("list").innerHTML = html;
+}
+
+function setStatus(i, st){
+    students[i].status = st;
+    save();
+    render();
+}
+
+function getClass(st){
+    if(st==="Có đi học") return "green";
+    if(st==="Nghỉ có lý do") return "orange";
+    return "";
+}
+
+function remove(i){
+    students.splice(i,1);
+    save();
+    render();
+}
+
+function save(){
+    localStorage.setItem('data_full', JSON.stringify(students));
+}
+
+function exportData(){
+    let date = document.getElementById("date").value;
+
+    if(!date){
+        alert("Chọn ngày!");
+        return;
+    }
+
+    let out = "<h3>Ngày: " + formatDate(date) + "</h3>";
+
+    students.forEach(s=>{
+        out += s.name + " (" + formatDate(s.dob) + "): " + s.status + "<br>";
+    });
+
+    document.getElementById("result").innerHTML = out;
+}
+
+function exportExcel(){
+    let date = document.getElementById("date").value;
+
+    if(!date){
+        alert("Chọn ngày!");
+        return;
+    }
+
+    let table = `
+    <table border="1">
+        <tr>
+            <th>STT</th>
+            <th>Tên</th>
+            <th>Ngày sinh</th>
+            <th>Trạng thái</th>
+        </tr>
+    `;
+
+    students.forEach((s,i)=>{
+        table += `
+        <tr>
+            <td>${i+1}</td>
+            <td>${s.name}</td>
+            <td>${formatDate(s.dob)}</td>
+            <td>${s.status}</td>
+        </tr>`;
+    });
+
+    table += `</table>`;
+
+    let html = `
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body>
+        <h3>Ngày: ${formatDate(date)}</h3>
+        ${table}
+    </body>
+    </html>
+    `;
+
+    let blob = new Blob([html], { type: "application/vnd.ms-excel" });
+    let link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = "diemdanh.xls";
+    link.click();
+}
+
+render();
+
+</script>
+
+</body>
+</html>
